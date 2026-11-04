@@ -17,8 +17,13 @@ import mushroom from "@/assets/tok-mushroom.png";
 import candy from "@/assets/tok-candy.png";
 import wheelSpin from "@/assets/icon-wheelspin.png";
 import ton from "@/assets/icon-ton.png";
+import offerMega from "@/assets/offer-mega.png";
+import offerWheel from "@/assets/offer-wheel.png";
+import offerStarter from "@/assets/offer-starter.png";
+import offerWhale from "@/assets/offer-whale.png";
 import type { Sym } from "@/lib/game";
 
 export const TOKEN_ART: Record<string, string> = { pumpkin, frog, star, house, dice, ghost, crown, mushroom, candy };
 export const SYM_ART: Record<Sym, string> = { coin, bolt, gem, chest, token: pumpkin };
 export const ART = { coin, bolt, gem, chest, wheelSpin, ton, rocket, bag, book, wheel };
+export const OFFER_ART: Record<string, string> = { mega: offerMega, wheel: offerWheel, starter: offerStarter, whale: offerWhale };
