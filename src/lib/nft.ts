@@ -7,6 +7,7 @@ const groups = [
 export const NFT_ITEMS = groups.flatMap((group, g) => group.names.map((name, i) => ({
   id: g * 20 + i + 1, name, group: group.name,
   rarity: i >= 16 ? "Legendary" : i >= 10 ? "Epic" : "Rare",
+  price: i >= 16 ? 8 : i >= 10 ? 3 : 1, // TON
   image: images[`../assets/nft-${group.key}-${i + 1}.webp`] ?? "",
 })));
 export type NftItem = typeof NFT_ITEMS[number];

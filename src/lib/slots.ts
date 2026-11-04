@@ -1,0 +1,33 @@
+/** Slot reel symbols, their chance per reel, and the pay table. */
+export const REEL_WEIGHTS = { coin: 30, bolt: 22, wheel: 10, chest: 14, ton: 4, token: 10, live: 10 } as const;
+export type BaseSym = "coin" | "bolt" | "wheel" | "chest" | "ton";
+export type SlotWin = { coins: number; spins: number; tickets: number; ton: number };
+
+/** Payout per bet x1 for matching 3 or 2 of a symbol (any position). */
+export const PAYTABLE: { sym: BaseSym; label: string; three: Partial<SlotWin>; two: Partial<SlotWin> }[] = [
+  { sym: "coin", label: "Coins", three: { coins: 5000 }, two: { coins: 500 } },
+  { sym: "chest", label: "Treasure", three: { coins: 20000 }, two: { coins: 1500 } },
+  { sym: "bolt", label: "Spins", three: { spins: 25 }, two: { spins: 3 } },
+  { sym: "wheel", label: "Wheel spins", three: { tickets: 3 }, two: { tickets: 1 } },
+  { sym: "ton", label: "TON", three: { ton: 0.1 }, two: { ton: 0.01 } },
+];
+
+const TOTAL = Object.values(REEL_WEIGHTS).reduce((a, b) => a + b, 0);
+export function symChance(sym: keyof typeof REEL_WEIGHTS) { return REEL_WEIGHTS[sym] / TOTAL; }
+/** Probability of exactly 3 or exactly 2 of a symbol in 3 reels. */
+export function odds(sym: BaseSym) {
+  const p = symChance(sym);
+  return { three: p ** 3, two: 3 * p * p * (1 - p) };
+}
+
+export function payout(cells: string[], bet: number): SlotWin {
+  const out: SlotWin = { coins: 0, spins: 0, tickets: 0, ton: 0 };
+  for (const row of PAYTABLE) {
+    const n = cells.filter((c) => c === row.sym).length;
+    const r = n === 3 ? row.three : n === 2 ? row.two : null;
+    if (!r) continue;
+    out.coins += (r.coins ?? 0) * bet; out.spins += (r.spins ?? 0) * bet;
+    out.tickets += (r.tickets ?? 0) * bet; out.ton = +(out.ton + (r.ton ?? 0) * bet).toFixed(2);
+  }
+  return out;
+}

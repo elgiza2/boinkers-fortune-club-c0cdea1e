@@ -1,15 +1,37 @@
-/** Spin-page live events. Each event lasts 24h or 48h and restarts automatically with fresh progress. */
-export type EventReward = { coins?: number; spins?: number; tickets?: number };
-export interface EventDef { key: string; name: string; hours: 24 | 48; offsetH: number }
+/**
+ * Live events shown under the slot machine. Each lasts 24h or 48h and restarts automatically.
+ * Event rewards are only spins or wheel spins (coins are earned from the slots only).
+ */
+export type EventReward = { spins?: number; tickets?: number; ton?: number };
+export interface Tier { need: number; reward: EventReward; price?: { ton: number; stars: number } }
+export interface EventDef { key: string; name: string; hours: 24 | 48; offsetH: number; allFree?: boolean; scale: number }
 
 export const LIVE_EVENTS: EventDef[] = [
-  { key: "house", name: "Tabletop Frenzy", hours: 24, offsetH: 0 },
-  { key: "dice", name: "Game Night", hours: 48, offsetH: 6 },
-  { key: "pumpkin", name: "Pumpkin Party", hours: 24, offsetH: 12 },
-  { key: "frog", name: "Frog Frenzy", hours: 48, offsetH: 18 },
-  { key: "star", name: "Star Rush", hours: 24, offsetH: 4 },
-  { key: "ghost", name: "Spooky Stitch", hours: 48, offsetH: 30 },
+  { key: "house", name: "Tabletop Frenzy", hours: 24, offsetH: 0, scale: 1 },
+  { key: "dice", name: "Game Night", hours: 48, offsetH: 6, scale: 1.5 },
+  { key: "ghost", name: "Spooky Stitch", hours: 24, offsetH: 12, allFree: true, scale: 0.8 },
+  { key: "crown", name: "Royal Heist", hours: 48, offsetH: 18, scale: 2 },
+  { key: "mushroom", name: "Mushroom Trail", hours: 24, offsetH: 4, allFree: true, scale: 1 },
+  { key: "candy", name: "Candy Rush", hours: 48, offsetH: 30, scale: 1.2 },
 ];
+
+export const PAID_PRICE = { ton: 0.25, stars: 25 };
+/** free, paid, free, free, free, paid — repeating. */
+const PATTERN = [false, true, false, false, false, true];
+export const TIER_COUNT = 12;
+
+export function eventTiers(def: EventDef): Tier[] {
+  let need = 0;
+  return Array.from({ length: TIER_COUNT }, (_, i) => {
+    need += Math.round((4 + i * 3) * def.scale);
+    const paid = !def.allFree && PATTERN[i % PATTERN.length]!;
+    const wheel = (i + def.key.length) % 2 === 0;
+    const reward: EventReward = paid
+      ? wheel ? { tickets: Math.round(15 * (1 + i / 3) * def.scale) } : { spins: Math.round(400 * (1 + i / 3) * def.scale) }
+      : wheel ? { tickets: 1 + Math.floor(i / 3) } : { spins: Math.round((10 + i * 6) * def.scale) };
+    return paid ? { need, reward, price: PAID_PRICE } : { need, reward };
+  });
+}
 
 /** Run number of an event (changes when the event restarts) and time left. */
 export function eventRun(def: EventDef, now: number) {
@@ -17,29 +39,16 @@ export function eventRun(def: EventDef, now: number) {
   return { run: Math.floor(t / ms), endsIn: ms - (t % ms) };
 }
 
-/** Reward milestones: tokens needed (cumulative) and what each pays. */
-export const TIER_COUNT = 12;
-export function tierNeed(i: number) { return [5, 5, 7, 7, 10, 12, 15, 18, 22, 26, 30, 35].slice(0, i + 1).reduce((a, b) => a + b, 0); }
-export function tierReward(i: number): EventReward {
-  const kind = i % 3;
-  if (kind === 0) return { coins: Math.round(2000 * Math.pow(1.6, i)) };
-  if (kind === 1) return { spins: 10 + i * 5 };
-  return { tickets: 1 + Math.floor(i / 4) };
-}
-
-export interface EventProgress { run: number; tokens: number; claimed: number }
-/** Progress for the current run; resets to zero when the event restarted. */
+export interface EventProgress { run: number; tokens: number; claimed: number[] }
 export function progressFor(p: EventProgress | undefined, run: number): EventProgress {
-  return p && p.run === run ? p : { run, tokens: 0, claimed: 0 };
+  return p && p.run === run && Array.isArray(p.claimed) ? p : { run, tokens: 0, claimed: [] };
 }
-/** Add landed tokens (every single token counts). */
+/** Every single landed token counts. */
 export function addTokens(p: EventProgress | undefined, run: number, n: number): EventProgress {
   const cur = progressFor(p, run);
   return { ...cur, tokens: cur.tokens + n };
 }
-/** Number of reached-but-unclaimed milestones. */
-export function claimable(p: EventProgress) {
-  let n = 0;
-  for (let i = p.claimed; i < TIER_COUNT && p.tokens >= tierNeed(i); i++) n++;
-  return n;
+/** Free milestones reached but not yet claimed. */
+export function claimable(def: EventDef, p: EventProgress) {
+  return eventTiers(def).filter((t, i) => !t.price && p.tokens >= t.need && !p.claimed.includes(i)).length;
 }

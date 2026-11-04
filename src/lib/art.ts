@@ -12,8 +12,13 @@ import star from "@/assets/tok-star.png";
 import house from "@/assets/tok-house.png";
 import dice from "@/assets/tok-dice.png";
 import ghost from "@/assets/tok-ghost.png";
+import crown from "@/assets/tok-crown.png";
+import mushroom from "@/assets/tok-mushroom.png";
+import candy from "@/assets/tok-candy.png";
+import wheelSpin from "@/assets/icon-wheelspin.png";
+import ton from "@/assets/icon-ton.png";
 import type { Sym } from "@/lib/game";
 
-export const TOKEN_ART: Record<string, string> = { pumpkin, frog, star, house, dice, ghost };
+export const TOKEN_ART: Record<string, string> = { pumpkin, frog, star, house, dice, ghost, crown, mushroom, candy };
 export const SYM_ART: Record<Sym, string> = { coin, bolt, gem, chest, token: pumpkin };
-export const ART = { coin, bolt, gem, chest, rocket, bag, book, wheel };
+export const ART = { coin, bolt, gem, chest, wheelSpin, ton, rocket, bag, book, wheel };
