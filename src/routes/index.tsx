@@ -4,8 +4,10 @@ import { toast } from "sonner";
 import { Crown, Gift, Ticket } from "lucide-react";
 import hero from "@/assets/hero-character.png";
 import { Screen } from "@/components/game/Shell";
-import { type Sym, slotPayout, useGame, fmt, beep, haptic, passNeed } from "@/lib/game";
-import { EventsRow } from "@/components/game/LiveEvents";
+import { useGame, fmt, beep, haptic, passNeed, currentEvent, evNeed, evReward, clock } from "@/lib/game";
+import { EventsRow, OffersRow } from "@/components/game/LiveEvents";
+import { REEL_WEIGHTS, payout } from "@/lib/slots";
+import { Paytable } from "@/components/game/Paytable";
 import { LIVE_EVENTS } from "@/lib/events";
 import { ART, SYM_ART, TOKEN_ART } from "@/lib/art";
 
@@ -23,29 +25,39 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-type Cell = string; // base symbol or an event token key
-const BASE = ["coin", "bolt", "gem", "chest"] as const;
-const STRIP: Cell[] = [...BASE, ...LIVE_EVENTS.map((e) => e.key)];
-const isEv = (c: Cell) => !(BASE as readonly string[]).includes(c);
-const rnd = (): Cell => Math.random() < 0.3
-  ? LIVE_EVENTS[Math.floor(Math.random() * LIVE_EVENTS.length)]!.key
-  : BASE[Math.floor(Math.random() * BASE.length)]!;
+type Cell = string; // base symbol, "token" (main event) or a live event key
+const BASE = ["coin", "bolt", "wheel", "chest", "ton"] as const;
+const STRIP: Cell[] = [...BASE, "token", ...LIVE_EVENTS.map((e) => e.key)];
+const isLive = (c: Cell) => LIVE_EVENTS.some((e) => e.key === c);
+const POOL: [Cell, number][] = [
+  ...BASE.map((b) => [b, REEL_WEIGHTS[b]] as [Cell, number]),
+  ["token", REEL_WEIGHTS.token],
+  ...LIVE_EVENTS.map((e) => [e.key, REEL_WEIGHTS.live / LIVE_EVENTS.length] as [Cell, number]),
+];
+const rnd = (): Cell => {
+  let r = Math.random() * POOL.reduce((a, [, w]) => a + w, 0);
+  for (const [c, w] of POOL) { r -= w; if (r <= 0) return c; }
+  return "coin";
+};
 const at = (c: Cell, d: number) => STRIP[(STRIP.indexOf(c) + d) % STRIP.length]!;
 const BETS = [1, 3, 5, 10];
+const CELL_ART: Record<string, string> = { coin: SYM_ART.coin, bolt: SYM_ART.bolt, chest: SYM_ART.chest, wheel: ART.wheelSpin, ton: ART.ton };
 
 function SymImg({ sym, className }: { sym: Cell; className: string }) {
-  const src = isEv(sym) ? TOKEN_ART[sym]! : SYM_ART[sym as Sym];
+  const src = sym === "token" ? TOKEN_ART[currentEvent(Date.now()).key]! : CELL_ART[sym] ?? TOKEN_ART[sym]!;
   return <img src={src} alt={sym} draggable={false} className={`object-contain ${className}`} />;
 }
 
 function Home() {
-  const { s, spend, grant, gainPass, gainLive } = useGame();
+  const { s, spend, grant, gainPass, gainLive, gainEvent } = useGame();
   const [now, setNow] = useState(0);
   useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const ev = currentEvent(now);
+  const evTok = s.eventId === ev.id ? s.evTokens : 0, evTier = s.eventId === ev.id ? s.evTier : 0;
   const [reels, setReels] = useState<Cell[]>(["bolt", "coin", "chest"]);
   const [spinning, setSpinning] = useState([false, false, false]);
   const [bet, setBet] = useState(1);
-  const [win, setWin] = useState<{ coins: number; spins: number; tickets: number; k: number } | null>(null);
+  const [win, setWin] = useState<{ coins: number; spins: number; tickets: number; ton: number; k: number } | null>(null);
   const [name, setName] = useState("Player");
   const [levelUp, setLevelUp] = useState(false);
   useEffect(() => {
@@ -71,15 +83,17 @@ function Home() {
       setSpinning((sp) => { const n = [...sp]; n[i] = false; return n; });
       beep(s.sound, 300 + i * 120);
       if (i === 2) {
-        const p = slotPayout((result.every((x) => x === result[0]) && isEv(result[0]!) ? ["token", "token", "token"] : result) as Sym[], bet);
+        const p = payout(result, bet);
+        const mainHits = result.filter((x) => x === "token").length * bet;
+        if (mainHits) p.coins += gainEvent(mainHits);
         const hits: Record<string, number> = {};
-        result.filter(isEv).forEach((k) => { hits[k] = (hits[k] ?? 0) + bet; });
-        if (Object.keys(hits).length) { gainLive(hits); Object.entries(hits).forEach(([k, n]) => toast(`+${n} ${LIVE_EVENTS.find((e) => e.key === k)!.name} token`)); }
-        grant({ ...p, tokens: 0 });
-        if (p.coins || p.spins || p.tickets) {
+        result.filter(isLive).forEach((k) => { hits[k] = (hits[k] ?? 0) + bet; });
+        if (Object.keys(hits).length) gainLive(hits);
+        grant(p);
+        if (p.coins || p.spins || p.tickets || p.ton) {
           setShake(true); setTimeout(() => setShake(false), 650);
           beep(s.sound, 900, 0.25);
-          setWin({ coins: p.coins, spins: p.spins, tickets: p.tickets, k: Date.now() });
+          setWin({ ...p, k: Date.now() });
         }
       }
     }, 700 + i * 350));
@@ -131,10 +145,10 @@ function Home() {
               {win ? (
                 <div key={win.k} className="animate-pop flex w-full items-center justify-center gap-2">
                   <span className="font-display text-xs tracking-wider text-cream/70">YOU WON</span>
-                  {([["coins", ART.coin], ["spins", ART.bolt], ["tickets", ART.gem]] as const).filter(([k]) => win[k] > 0).map(([k, img]) => (
+                  {([["coins", ART.coin], ["spins", ART.bolt], ["tickets", ART.wheelSpin], ["ton", ART.ton]] as const).filter(([k]) => win[k] > 0).map(([k, img]) => (
                     <span key={k} className="flex items-center gap-1 rounded-full bg-cream/15 py-0.5 pl-0.5 pr-2.5">
                       <img src={img} alt="" className="h-7 w-7 object-contain" />
-                      <span className="font-display text-base leading-none text-sun">+{fmt(win[k])}</span>
+                      <span className="font-display text-base leading-none text-sun">+{k === "ton" ? win[k] : fmt(win[k])}</span>
                     </span>
                   ))}
                 </div>
@@ -150,7 +164,25 @@ function Home() {
               )}
             </div>
 
-            <EventsRow now={now} />
+            {/* main 48h event token track */}
+            <div className="mt-3 flex items-center gap-2 px-1">
+              <img src={TOKEN_ART[ev.key]} alt="" className="h-9 w-9 shrink-0 object-contain drop-shadow-[0_3px_0_var(--ink)]" />
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-baseline justify-between">
+                  <span className="truncate font-display text-[11px] leading-none text-cream">{ev.name.toUpperCase()}</span>
+                  <span className="font-display text-[10px] leading-none text-cream/60">{now ? clock(ev.endsIn) : ""}</span>
+                </div>
+                <div className="bar mt-0.5">
+                  <div className="bar-fill" style={{ width: `${Math.max(4, (evTok / evNeed(evTier)) * 100)}%`, background: "linear-gradient(90deg, var(--berry), var(--sun))" }} />
+                  <span className="bar-label">{evTok}/{evNeed(evTier)}</span>
+                </div>
+              </div>
+              <span className="relative shrink-0">
+                <img src={ART.coin} alt="" className="h-9 w-9 object-contain" />
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap font-display text-[10px] leading-none text-cream text-outline">{fmt(evReward(evTier))}</span>
+              </span>
+              <Paytable />
+            </div>
 
             {/* reels */}
             <div className="mt-3 grid grid-cols-3 gap-2">
