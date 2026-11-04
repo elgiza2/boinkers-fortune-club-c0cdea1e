@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { addTokens, eventRun, LIVE_EVENTS, progressFor, tierNeed, tierReward, type EventProgress, type EventReward } from "./events";
+import { addTokens, eventRun, eventTiers, LIVE_EVENTS, progressFor, type EventProgress, type EventReward } from "./events";
 import { bankProduction, buyCharacter, mergeRate, moveCharacter, starterBoard, type Board } from "./merge";
 
 export const MAX_SPINS = 50;
@@ -34,6 +34,7 @@ export interface GameState {
   mergeBest: number;
   soloBank: number;
   live: Record<string, EventProgress>;
+  ton: number;
 }
 
 const initial = (): GameState => ({
@@ -43,7 +44,7 @@ const initial = (): GameState => ({
   tasksDone: [], claimedMilestones: [], sound: true, lang: "en",
   passXp: 0, passLevel: 1, premium: false,
   eventId: -1, evTokens: 0, evTier: 0,
-  mergeBoard: starterBoard(), mergeBest: 1, soloBank: 0, live: {},
+  mergeBoard: starterBoard(), mergeBest: 1, soloBank: 0, live: {}, ton: 0,
 });
 
 /** Solo per hour grows with character upgrades and level. */
@@ -121,7 +122,7 @@ export const MILESTONES = [
   { at: 400, label: "25K Coins", reward: { coins: 25000 }, big: true },
 ];
 
-type Reward = Partial<Pick<GameState, "coins" | "spins" | "tickets" | "solo" | "tokens">>;
+type Reward = Partial<Pick<GameState, "coins" | "spins" | "tickets" | "solo" | "tokens" | "ton">>;
 
 interface Ctx {
   s: GameState;
@@ -141,7 +142,7 @@ interface Ctx {
   buyMerge: () => void;
   moveMerge: (from: number, to: number) => void;
   gainLive: (hits: Record<string, number>) => void;
-  claimLive: (key: string) => EventReward | null;
+  claimLive: (key: string, tier: number) => EventReward | null;
 }
 const GameCtx = createContext<Ctx | null>(null);
 const KEY = "solo-slots-v1";
@@ -179,7 +180,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const grant = useCallback((r: Reward) => setS((p) => ({
     ...p, coins: p.coins + (r.coins ?? 0), spins: p.spins + (r.spins ?? 0), tickets: p.tickets + (r.tickets ?? 0),
-    solo: p.solo + (r.solo ?? 0), tokens: p.tokens + (r.tokens ?? 0),
+    solo: p.solo + (r.solo ?? 0), tokens: p.tokens + (r.tokens ?? 0), ton: +(p.ton + (r.ton ?? 0)).toFixed(2),
   })), []);
   const spend = useCallback((r: Reward) => {
     let ok = true;
@@ -207,12 +208,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
     return { ...p, live };
   }), []);
-  const claimLive = useCallback((key: string) => {
+  const claimLive = useCallback((key: string, tier: number) => {
     const def = LIVE_EVENTS.find((e) => e.key === key); if (!def) return null;
-    const cur = progressFor(s.live[key], eventRun(def, Date.now()).run);
-    if (s.tokens < 0 || cur.tokens < tierNeed(cur.claimed)) return null;
-    const r = tierReward(cur.claimed);
-    setS((p) => ({ ...p, coins: p.coins + (r.coins ?? 0), spins: p.spins + (r.spins ?? 0), tickets: p.tickets + (r.tickets ?? 0), live: { ...p.live, [key]: { ...cur, claimed: cur.claimed + 1 } } }));
+    const cur = progressFor(s.live[key], eventRun(def, Date.now()).run), t = eventTiers(def)[tier];
+    if (!t || t.price || cur.tokens < t.need || cur.claimed.includes(tier)) return null;
+    const r = t.reward;
+    setS((p) => ({ ...p, spins: p.spins + (r.spins ?? 0), tickets: p.tickets + (r.tickets ?? 0), ton: +(p.ton + (r.ton ?? 0)).toFixed(2), live: { ...p.live, [key]: { ...cur, claimed: [...cur.claimed, tier] } } }));
     return r;
   }, [s]);
   const claimSolo = useCallback(() => {

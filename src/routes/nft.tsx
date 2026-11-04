@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { NFT_ITEMS } from "@/lib/nft";
 import { getTonWallet } from "@/lib/ton-wallet";
+import { ART } from "@/lib/art";
 
 export const Route = createFileRoute("/nft")({
   head: () => ({
@@ -44,7 +45,7 @@ function NftPage() {
           <article key={item.id} className={`nft-tile nft-${item.group.toLowerCase()}`}>
             <div className="nft-tile-art"><img src={item.image} alt={item.name} loading="lazy" /></div>
             <h2>{item.name}</h2>
-            <Button onClick={buy} disabled={connecting} className="nft-tile-buy" aria-label={`Buy ${item.name} with TON`}>Buy</Button>
+            <Button onClick={buy} disabled={connecting} className="nft-tile-buy gap-1" aria-label={`Buy ${item.name} for ${item.price} TON`}><img src={ART.ton} alt="" className="h-5 w-5" />{item.price} TON</Button>
           </article>
         ))}
       </div>
