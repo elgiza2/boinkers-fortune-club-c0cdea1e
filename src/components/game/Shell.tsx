@@ -45,7 +45,7 @@ export function TopBar() {
             <div className="mt-0.5 flex items-center gap-0.5"><img src={ART.gem} alt="" className="h-3.5 w-3.5" /><span className="font-display text-[11px] text-cream">{fmt(s.solo)}</span></div>
           </div>
         </div>
-        <div className="flex min-w-0 items-center justify-end gap-1">
+        <div className="flex min-w-0 items-center justify-end gap-3">
           <Pill icon={ART.coin} value={fmt(s.coins)} />
           <Pill icon={ART.wheelSpin} value={fmt(s.tickets)} />
           <Pill icon={ART.ton} value={String(s.ton)} />
@@ -61,8 +61,8 @@ export function TopBar() {
 
 function Pill({ icon, value }: { icon: string; value: string }) {
   return (
-    <div className="relative flex h-7 shrink-0 items-center rounded-full border border-white/15 bg-ink/55 pl-5 pr-2.5 backdrop-blur-md">
-      <img src={icon} alt="" className="absolute -left-1.5 h-6 w-6 object-contain drop-shadow-[0_2px_0_var(--ink)]" />
+    <div className="relative flex h-7 shrink-0 items-center rounded-full border border-cream/15 bg-ink/70 pl-5 pr-2">
+      <img src={icon} alt="" className="absolute -left-2.5 h-7 w-7 object-contain drop-shadow-[0_2px_0_var(--ink)]" />
       <span className="font-display text-xs leading-none text-cream">{value}</span>
     </div>
   );
