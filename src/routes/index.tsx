@@ -7,7 +7,6 @@ import { Screen } from "@/components/game/Shell";
 import { useGame, fmt, beep, haptic, passNeed, currentEvent, evNeed, evReward, clock } from "@/lib/game";
 import { EventsRow } from "@/components/game/LiveEvents";
 import { REEL_WEIGHTS, payout } from "@/lib/slots";
-import { Paytable } from "@/components/game/Paytable";
 import { LIVE_EVENTS } from "@/lib/events";
 import { ART, SYM_ART, TOKEN_ART } from "@/lib/art";
 
@@ -181,7 +180,6 @@ function Home() {
                 <img src={ART.coin} alt="" className="h-9 w-9 object-contain" />
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap font-display text-[10px] leading-none text-cream text-outline">{fmt(evReward(evTier))}</span>
               </span>
-              <Paytable />
             </div>
 
             {/* reels */}
