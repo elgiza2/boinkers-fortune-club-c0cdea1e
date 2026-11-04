@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { TrendingDown, TrendingUp } from "lucide-react";
 import { useGame, fmt, clock } from "@/lib/game";
 import { ART, TOKEN_ART } from "@/lib/art";
 import { LIVE_EVENTS, claimable, eventRun, progressFor, type EventReward } from "@/lib/events";
@@ -53,29 +52,6 @@ export function EventsRow({ now }: { now: number }) {
         {offers.map((o) => (
           <button key={o.key} onClick={() => setOpen(o)} aria-label={`Open ${o.name} offer`} className="transition-transform active:scale-90">
             <Chip img={OFFER_ART[o.key]!} timer={now ? clock(o.endsIn) : "--:--:--"} label={o.name.toUpperCase()} badge={o.ton} badgeIcon={ART.ton} />
-          </button>
-        ))}
-      </div>
-
-export function OffersRow({ now }: { now: number }) {
-  const [open, setOpen] = useState<Offer | null>(null);
-  const offers = currentOffers(now || 0);
-  return (
-    <>
-      <div className="flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
-        {offers.map((o) => (
-          <button key={o.key} onClick={() => setOpen(o)} aria-label={`Open ${o.name} offer`} className="relative flex w-[104px] shrink-0 flex-col items-center rounded-2xl border-2 border-ink bg-gradient-to-b from-grape to-berry px-1.5 pb-1.5 pt-1 shadow-[0_3px_0_var(--ink)] transition-transform active:scale-95">
-            <span className="font-display text-[10px] leading-tight text-cream text-outline">{o.name.toUpperCase()}</span>
-            <span className="mt-1 flex items-center gap-1">
-              <img src={ART.bolt} alt="" className="h-6 w-6" /><span className="font-display text-xs text-cream">{fmt(o.spins)}</span>
-              <img src={ART.wheelSpin} alt="" className="h-5 w-5" /><span className="font-display text-xs text-cream">{o.tickets}</span>
-            </span>
-            <span className="mt-1 flex w-full items-center justify-center gap-1 rounded-full bg-cream py-0.5">
-              <img src={ART.ton} alt="" className="h-4 w-4" />
-              <span className="font-display text-xs leading-none text-ink">{o.ton}</span>
-              {o.trend === "up" ? <TrendingUp className="h-3 w-3 text-berry" strokeWidth={3} /> : <TrendingDown className="h-3 w-3 text-grape" strokeWidth={3} />}
-            </span>
-            <span className="mt-0.5 font-display text-[9px] leading-none text-cream/70">{now ? clock(o.endsIn) : ""}</span>
           </button>
         ))}
       </div>

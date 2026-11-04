@@ -5,7 +5,7 @@ import { ART, SYM_ART } from "@/lib/art";
 import { fmt } from "@/lib/game";
 import { PAYTABLE, odds, symChance, type SlotWin } from "@/lib/slots";
 
-const ICON: Record<string, string> = { coin: SYM_ART.coin, chest: SYM_ART.chest, bolt: SYM_ART.bolt, wheel: ART.wheelSpin, ton: ART.ton };
+const ICON: Record<string, string> = { coin: SYM_ART.coin, chest: SYM_ART.chest, bolt: SYM_ART.bolt, wheel: ART.wheelSpin, gem: SYM_ART.gem };
 const pct = (x: number) => `${(x * 100).toFixed(x < 0.01 ? 2 : 1)}%`;
 function Prize({ r }: { r: Partial<SlotWin> }) {
   const [img, n] = r.coins ? [ART.coin, fmt(r.coins)] : r.spins ? [ART.bolt, String(r.spins)] : r.tickets ? [ART.wheelSpin, String(r.tickets)] : [ART.ton, String(r.ton)];

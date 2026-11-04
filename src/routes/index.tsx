@@ -5,7 +5,7 @@ import { Crown, Gift, Ticket } from "lucide-react";
 import hero from "@/assets/hero-character.png";
 import { Screen } from "@/components/game/Shell";
 import { useGame, fmt, beep, haptic, passNeed, currentEvent, evNeed, evReward, clock } from "@/lib/game";
-import { EventsRow, OffersRow } from "@/components/game/LiveEvents";
+import { EventsRow } from "@/components/game/LiveEvents";
 import { REEL_WEIGHTS, payout } from "@/lib/slots";
 import { Paytable } from "@/components/game/Paytable";
 import { LIVE_EVENTS } from "@/lib/events";
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Cell = string; // base symbol, "token" (main event) or a live event key
-const BASE = ["coin", "bolt", "wheel", "chest", "ton"] as const;
+const BASE = ["coin", "bolt", "wheel", "chest", "gem"] as const;
 const STRIP: Cell[] = [...BASE, "token", ...LIVE_EVENTS.map((e) => e.key)];
 const isLive = (c: Cell) => LIVE_EVENTS.some((e) => e.key === c);
 const POOL: [Cell, number][] = [
@@ -41,7 +41,7 @@ const rnd = (): Cell => {
 };
 const at = (c: Cell, d: number) => STRIP[(STRIP.indexOf(c) + d) % STRIP.length]!;
 const BETS = [1, 3, 5, 10];
-const CELL_ART: Record<string, string> = { coin: SYM_ART.coin, bolt: SYM_ART.bolt, chest: SYM_ART.chest, wheel: ART.wheelSpin, ton: ART.ton };
+const CELL_ART: Record<string, string> = { coin: SYM_ART.coin, bolt: SYM_ART.bolt, chest: SYM_ART.chest, wheel: ART.wheelSpin, gem: SYM_ART.gem };
 
 function SymImg({ sym, className }: { sym: Cell; className: string }) {
   const src = sym === "token" ? TOKEN_ART[currentEvent(Date.now()).key]! : CELL_ART[sym] ?? TOKEN_ART[sym]!;
@@ -226,7 +226,6 @@ function Home() {
         </div>
         <div className="mt-3 w-full max-w-[360px] space-y-2">
           <EventsRow now={now} />
-          <OffersRow now={now} />
         </div>
       </div>
     </Screen>

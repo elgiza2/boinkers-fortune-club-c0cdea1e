@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LIVE_EVENTS, PAID_PRICE, addTokens, claimable, eventRun, eventTiers } from "./events";
-import { payout } from "./slots";
+import { PAYTABLE, payout } from "./slots";
 import { currentOffers, OFFER_MS } from "./offers";
 
 describe("live events", () => {
@@ -38,10 +38,13 @@ describe("live events", () => {
 });
 
 describe("slots", () => {
-  it("pays spins, wheel spins and TON, not only coins", () => {
+  it("pays spins, wheel spins and coins, not only coins", () => {
     expect(payout(["bolt", "bolt", "bolt"], 1).spins).toBe(25);
     expect(payout(["wheel", "wheel", "coin"], 1).tickets).toBe(1);
-    expect(payout(["ton", "ton", "ton"], 2).ton).toBe(0.2);
+    expect(payout(["gem", "gem", "gem"], 2).coins).toBe(20000);
+  });
+  it("never awards TON from the slots", () => {
+    for (const a of PAYTABLE) expect(payout([a.sym, a.sym, a.sym], 3).ton).toBe(0);
   });
 });
 
