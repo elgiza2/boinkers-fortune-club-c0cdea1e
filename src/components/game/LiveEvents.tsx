@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Lock, X } from "lucide-react";
 import { toast } from "sonner";
 import { useGame, fmt, clock } from "@/lib/game";
@@ -35,7 +36,7 @@ export function EventsRow({ now }: { now: number }) {
           );
         })}
       </div>
-      {open && <EventSheet def={open} now={now} onClose={() => setOpen(null)} />}
+      {open && createPortal(<EventSheet def={open} now={now} onClose={() => setOpen(null)} />, document.body)}
     </>
   );
 }
