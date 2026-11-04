@@ -47,7 +47,7 @@ function EventSheet({ def, now, onClose }: { def: EventDef; now: number; onClose
   const p = progressFor(s.live[def.key], run);
   const claim = () => { const r = claimLive(def.key); if (r) toast.success("Reward claimed!"); };
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-ink/85 backdrop-blur-md" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex flex-col bg-ink/90 backdrop-blur-md" onClick={onClose}>
       <div className="mx-auto flex h-full w-full max-w-md flex-col px-4 pb-6 pt-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 rounded-full bg-ink/70 py-1 pl-1 pr-3">
