@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Volume2, VolumeX, X, Settings, Wallet } from "lucide-react";
+import { Volume2, VolumeX, X, Menu, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import hero from "@/assets/hero-character.png";
 import sky from "@/assets/night-sky.jpg";
@@ -10,25 +10,50 @@ import { ART } from "@/lib/art";
 import { getTonWallet } from "@/lib/ton-wallet";
 import nftIcon from "@/assets/nav-nft.png";
 
+type TgWebApp = { safeAreaInset?: { top?: number }; contentSafeAreaInset?: { top?: number }; initDataUnsafe?: { user?: { first_name?: string; username?: string } }; onEvent?: (e: string, cb: () => void) => void };
+function useTelegramSafeTop() {
+  useEffect(() => {
+    const tg = (window as unknown as { Telegram?: { WebApp?: TgWebApp } }).Telegram?.WebApp;
+    const apply = () => {
+      const top = (tg?.safeAreaInset?.top ?? 0) + (tg?.contentSafeAreaInset?.top ?? 0);
+      document.documentElement.style.setProperty("--tg-safe-top", `${top}px`);
+    };
+    apply();
+    tg?.onEvent?.("safeAreaChanged", apply);
+    tg?.onEvent?.("contentSafeAreaChanged", apply);
+  }, []);
+}
+
 export function TopBar() {
   const { s } = useGame();
   const [settings, setSettings] = useState(false);
+  const [name, setName] = useState("Player");
+  useTelegramSafeTop();
+  useEffect(() => {
+    const u = (window as unknown as { Telegram?: { WebApp?: TgWebApp } }).Telegram?.WebApp?.initDataUnsafe?.user;
+    if (u?.first_name || u?.username) setName(u.username ?? u.first_name ?? "Player");
+  }, []);
   return (
-    <header className="relative z-30 grid h-13 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-white/10 bg-ink/35 px-3 backdrop-blur-xl">
-      <div className="relative shrink-0">
-        <div className="h-9 w-9 overflow-hidden rounded-full border-2 border-white/25 bg-ink shadow-[0_2px_6px_-1px_oklch(0_0_0/.5)]">
-          <img src={hero} alt="" className="h-full w-full scale-125 object-cover object-top" />
+    <header className="safe-top relative z-30 shrink-0 border-b border-cream/10 bg-ink/45 backdrop-blur-xl">
+      <div className="grid h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2.5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-[3px] border-lime bg-ink">
+            <img src={hero} alt="" className="h-full w-full scale-125 object-cover object-top" />
+          </div>
+          <div className="min-w-0 leading-none">
+            <div className="max-w-[64px] truncate font-display text-[11px] text-cream">{name}</div>
+            <div className="mt-0.5 flex items-center gap-0.5"><img src={ART.gem} alt="" className="h-3.5 w-3.5" /><span className="font-display text-[11px] text-cream">{fmt(s.solo)}</span></div>
+          </div>
         </div>
-        <span className="absolute -bottom-1 -right-1 grid h-4 min-w-4 place-items-center rounded-full bg-sun px-0.5 font-display text-[9px] leading-none text-cream text-outline shadow-[0_1px_2px_oklch(0_0_0/.4)]">{s.level}</span>
+        <div className="flex min-w-0 items-center justify-end gap-1">
+          <Pill icon={ART.coin} value={fmt(s.coins)} />
+          <Pill icon={ART.wheelSpin} value={fmt(s.tickets)} />
+          <Pill icon={ART.ton} value={String(s.ton)} />
+        </div>
+        <button onClick={() => setSettings(true)} aria-label="Open settings" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border-2 border-ink bg-gradient-to-b from-sky to-grape text-cream shadow-[0_2px_0_var(--ink)] active:scale-90">
+          <Menu className="h-5 w-5" strokeWidth={3} />
+        </button>
       </div>
-      <div className="flex min-w-0 items-center justify-end gap-1.5">
-        <Pill icon={ART.coin} value={fmt(s.coins)} />
-        <Pill icon={ART.gem} value={fmt(s.solo)} />
-        <Pill icon={ART.bolt} value={String(s.spins)} />
-      </div>
-      <button onClick={() => setSettings(true)} aria-label="Open settings" className="glass-card grid h-8 w-8 shrink-0 place-items-center !rounded-full text-cream transition-transform active:scale-90">
-        <Settings className="h-4 w-4" strokeWidth={3} />
-      </button>
       <SettingsSheet open={settings} onClose={() => setSettings(false)} />
     </header>
   );
