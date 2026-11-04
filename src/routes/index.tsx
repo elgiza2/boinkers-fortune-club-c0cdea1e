@@ -71,7 +71,7 @@ function Home() {
       setSpinning((sp) => { const n = [...sp]; n[i] = false; return n; });
       beep(s.sound, 300 + i * 120);
       if (i === 2) {
-        const p = slotPayout(result.map((x) => (isEv(x) ? (x === result[0] ? "token" : x) : x)) as Sym[], bet);
+        const p = slotPayout((result.every((x) => x === result[0]) && isEv(result[0]!) ? ["token", "token", "token"] : result) as Sym[], bet);
         const hits: Record<string, number> = {};
         result.filter(isEv).forEach((k) => { hits[k] = (hits[k] ?? 0) + bet; });
         if (Object.keys(hits).length) { gainLive(hits); Object.entries(hits).forEach(([k, n]) => toast(`+${n} ${LIVE_EVENTS.find((e) => e.key === k)!.name} token`)); }
