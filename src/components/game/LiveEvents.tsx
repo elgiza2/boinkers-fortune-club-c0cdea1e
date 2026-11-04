@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { TrendingDown, TrendingUp } from "lucide-react";
 import { useGame, fmt, clock } from "@/lib/game";
 import { ART, TOKEN_ART } from "@/lib/art";
 import { LIVE_EVENTS, claimable, eventRun, progressFor, type EventReward } from "@/lib/events";
