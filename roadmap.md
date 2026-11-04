@@ -8,3 +8,6 @@
 - [x] Remove top toast notifications
 - [x] Offers row (big spins + wheel bundles for TON), price/amount change every 4h
 - [x] Show price on NFT page
+- [x] Offers shown as buttons exactly like the event chips in the same row
+- [x] No TON prizes from slots (TON reel symbol replaced with gems)
+

@@ -1,15 +1,15 @@
 /** Slot reel symbols, their chance per reel, and the pay table. */
-export const REEL_WEIGHTS = { coin: 30, bolt: 22, wheel: 10, chest: 14, ton: 4, token: 10, live: 10 } as const;
-export type BaseSym = "coin" | "bolt" | "wheel" | "chest" | "ton";
+export const REEL_WEIGHTS = { coin: 30, bolt: 22, wheel: 10, chest: 14, gem: 4, token: 10, live: 10 } as const;
+export type BaseSym = "coin" | "bolt" | "wheel" | "chest" | "gem";
 export type SlotWin = { coins: number; spins: number; tickets: number; ton: number };
 
-/** Payout per bet x1 for matching 3 or 2 of a symbol (any position). */
+/** Payout per bet x1 for matching 3 or 2 of a symbol (any position). Slots never award TON. */
 export const PAYTABLE: { sym: BaseSym; label: string; three: Partial<SlotWin>; two: Partial<SlotWin> }[] = [
   { sym: "coin", label: "Coins", three: { coins: 5000 }, two: { coins: 500 } },
   { sym: "chest", label: "Treasure", three: { coins: 20000 }, two: { coins: 1500 } },
   { sym: "bolt", label: "Spins", three: { spins: 25 }, two: { spins: 3 } },
   { sym: "wheel", label: "Wheel spins", three: { tickets: 3 }, two: { tickets: 1 } },
-  { sym: "ton", label: "TON", three: { ton: 0.1 }, two: { ton: 0.01 } },
+  { sym: "gem", label: "Gems", three: { coins: 10000 }, two: { coins: 1000 } },
 ];
 
 const TOTAL = Object.values(REEL_WEIGHTS).reduce((a, b) => a + b, 0);
