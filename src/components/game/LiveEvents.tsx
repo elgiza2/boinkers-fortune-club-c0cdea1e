@@ -17,10 +17,15 @@ export function RewardChip({ r, size = "md" }: { r: EventReward; size?: "md" | "
   );
 }
 
-function Chip({ img, timer, label, badge }: { img: string; timer: string; label: string; badge?: number }) {
+function Chip({ img, timer, label, badge, badgeIcon }: { img: string; timer: string; label: string; badge?: string | number; badgeIcon?: string }) {
   return (
     <span className="relative flex w-[62px] shrink-0 flex-col items-center">
-      {!!badge && <span className="absolute right-0 top-0 z-10 grid h-4 min-w-4 place-items-center rounded-full border-2 border-ink bg-berry px-0.5 font-display text-[9px] leading-none text-cream">{badge}</span>}
+      {!!badge && (
+        <span className="absolute right-0 top-0 z-10 flex h-4 min-w-4 items-center gap-0.5 rounded-full border-2 border-ink bg-berry px-0.5 font-display text-[9px] leading-none text-cream">
+          {badgeIcon && <img src={badgeIcon} alt="" className="h-2.5 w-2.5 object-contain" />}
+          {badge}
+        </span>
+      )}
       <img src={img} alt="" className="h-11 w-11 object-contain drop-shadow-[0_3px_0_var(--ink)]" />
       <span className="mt-0.5 rounded-full bg-cream px-1.5 font-display text-[9px] leading-[14px] text-berry">{timer}</span>
       <span className="mt-0.5 line-clamp-2 text-center font-display text-[9px] leading-[10px] text-cream text-outline">{label}</span>
@@ -28,21 +33,29 @@ function Chip({ img, timer, label, badge }: { img: string; timer: string; label:
   );
 }
 
+const OFFER_ART: Record<string, string> = { mega: ART.rocket, wheel: ART.wheel, starter: ART.bag, whale: ART.chest };
+
 export function EventsRow({ now }: { now: number }) {
   const { s } = useGame();
+  const [open, setOpen] = useState<Offer | null>(null);
+  const offers = currentOffers(now || 0);
   return (
-    <div className="flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
-      {LIVE_EVENTS.map((e) => {
-        const { run, endsIn } = eventRun(e, now || 0);
-        return (
-          <Link key={e.key} to="/event/$key" params={{ key: e.key }} aria-label={`Open ${e.name}`} className="transition-transform active:scale-90">
-            <Chip img={TOKEN_ART[e.key]!} timer={now ? clock(endsIn) : "--:--:--"} label={e.name.toUpperCase()} badge={claimable(e, progressFor(s.live[e.key], run))} />
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
+    <>
+      <div className="flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+        {LIVE_EVENTS.map((e) => {
+          const { run, endsIn } = eventRun(e, now || 0);
+          return (
+            <Link key={e.key} to="/event/$key" params={{ key: e.key }} aria-label={`Open ${e.name}`} className="transition-transform active:scale-90">
+              <Chip img={TOKEN_ART[e.key]!} timer={now ? clock(endsIn) : "--:--:--"} label={e.name.toUpperCase()} badge={claimable(e, progressFor(s.live[e.key], run))} />
+            </Link>
+          );
+        })}
+        {offers.map((o) => (
+          <button key={o.key} onClick={() => setOpen(o)} aria-label={`Open ${o.name} offer`} className="transition-transform active:scale-90">
+            <Chip img={OFFER_ART[o.key]!} timer={now ? clock(o.endsIn) : "--:--:--"} label={o.name.toUpperCase()} badge={o.ton} badgeIcon={ART.ton} />
+          </button>
+        ))}
+      </div>
 
 export function OffersRow({ now }: { now: number }) {
   const [open, setOpen] = useState<Offer | null>(null);
