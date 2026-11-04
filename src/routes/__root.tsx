@@ -125,7 +125,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <GameProvider>
         <Outlet />
-        <Toaster position="top-center" />
+
       </GameProvider>
     </QueryClientProvider>
   );
