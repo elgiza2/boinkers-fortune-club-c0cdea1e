@@ -9,8 +9,11 @@ import wheel from "@/assets/nav-wheel.png";
 import pumpkin from "@/assets/tok-pumpkin.png";
 import frog from "@/assets/tok-frog.png";
 import star from "@/assets/tok-star.png";
+import house from "@/assets/tok-house.png";
+import dice from "@/assets/tok-dice.png";
+import ghost from "@/assets/tok-ghost.png";
 import type { Sym } from "@/lib/game";
 
-export const TOKEN_ART: Record<string, string> = { pumpkin, frog, star };
+export const TOKEN_ART: Record<string, string> = { pumpkin, frog, star, house, dice, ghost };
 export const SYM_ART: Record<Sym, string> = { coin, bolt, gem, chest, token: pumpkin };
 export const ART = { coin, bolt, gem, chest, rocket, bag, book, wheel };
