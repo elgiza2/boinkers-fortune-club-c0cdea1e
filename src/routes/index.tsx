@@ -1,24 +1,208 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Crown, Gift, Ticket } from "lucide-react";
+import hero from "@/assets/hero-character.png";
+import { Screen } from "@/components/game/Shell";
+import { SYMBOLS, type Sym, slotPayout, useGame, fmt, beep, haptic, passNeed, currentEvent, evNeed, evReward, clock } from "@/lib/game";
+import { ART, SYM_ART, TOKEN_ART } from "@/lib/art";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "Solo Slots — Spin & Win" },
+      { name: "description", content: "Spin the cartoon slot machine and win coins, spins and tickets." },
+      { property: "og:title", content: "Solo Slots — Spin & Win" },
+      { property: "og:description", content: "Spin the cartoon slot machine and win coins, spins and tickets." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: Home,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+const rnd = (): Sym => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]!;
+const at = (sym: Sym, d: number) => SYMBOLS[(SYMBOLS.indexOf(sym) + d) % SYMBOLS.length]!;
+const BETS = [1, 3, 5, 10];
+
+function SymImg({ sym, className }: { sym: Sym; className: string }) {
+  const src = sym === "token" ? TOKEN_ART[currentEvent(Date.now()).key]! : SYM_ART[sym];
+  return <img src={src} alt={sym} draggable={false} className={`object-contain ${className}`} />;
+}
+
+function Home() {
+  const { s, spend, grant, gainPass, gainEvent } = useGame();
+  const [now, setNow] = useState(0);
+  useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const ev = currentEvent(now);
+  const evTok = s.eventId === ev.id ? s.evTokens : 0, evTier = s.eventId === ev.id ? s.evTier : 0;
+  const [reels, setReels] = useState<Sym[]>(["bolt", "coin", "chest"]);
+  const [spinning, setSpinning] = useState([false, false, false]);
+  const [bet, setBet] = useState(1);
+  const [win, setWin] = useState<{ coins: number; spins: number; tickets: number; k: number } | null>(null);
+  const [name, setName] = useState("Player");
+  const [levelUp, setLevelUp] = useState(false);
+  useEffect(() => {
+    const u = (window as unknown as { Telegram?: { WebApp?: { initDataUnsafe?: { user?: { first_name?: string } } } } }).Telegram?.WebApp?.initDataUnsafe?.user;
+    if (u?.first_name) setName(u.first_name);
+  }, []);
+  const [shake, setShake] = useState(false);
+  const [auto, setAuto] = useState(false);
+  const holdT = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const busy = spinning.some(Boolean);
+
+  const spin = () => {
+    if (busy) return;
+    if (!spend({ spins: bet })) { toast.error("Out of spins! Wait for recharge or earn more."); setAuto(false); return; }
+    haptic(); setWin(null);
+    const up = gainPass(bet);
+    if (up) setTimeout(() => setLevelUp(true), 1500);
+    if (up) setTimeout(() => toast.success(`Pass level ${up}! Gifts added`), 1500);
+    const result: Sym[] = [rnd(), rnd(), rnd()];
+    setSpinning([true, true, true]);
+    result.forEach((sym, i) => setTimeout(() => {
+      setReels((r) => { const n = [...r]; n[i] = sym; return n; });
+      setSpinning((sp) => { const n = [...sp]; n[i] = false; return n; });
+      beep(s.sound, 300 + i * 120);
+      if (i === 2) {
+        const p = slotPayout(result, bet);
+        const hits = result.filter((x) => x === "token").length * bet;
+        if (hits) p.coins += gainEvent(hits);
+        grant({ ...p, tokens: 0 });
+        if (p.coins || p.spins || p.tickets) {
+          setShake(true); setTimeout(() => setShake(false), 650);
+          beep(s.sound, 900, 0.25);
+          setWin({ coins: p.coins, spins: p.spins, tickets: p.tickets, k: Date.now() });
+        }
+      }
+    }, 700 + i * 350));
+  };
+
+  useEffect(() => {
+    if (auto && !busy) { const t = setTimeout(spin, 400); return () => clearTimeout(t); }
+    return undefined;
+  }); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const spinBtn = (
+    <div className="relative h-full w-full">
+      {/* dark ring behind the diamond */}
+      <div className="absolute inset-[6px] rotate-45 rounded-[30px] border-[3px] border-ink bg-night" />
+      <button
+        onClick={() => { if (auto) setAuto(false); else spin(); }}
+        onPointerDown={() => { holdT.current = setTimeout(() => { setAuto(true); toast("Autospin ON — tap to stop"); }, 700); }}
+        onPointerUp={() => clearTimeout(holdT.current)} onPointerLeave={() => clearTimeout(holdT.current)}
+        aria-label="Spin"
+        className="group absolute inset-[13px] transition-transform active:scale-95"
+      >
+        <span
+          className={`absolute inset-0 rotate-45 rounded-[24px] border-[3px] border-ink ${auto ? "bg-berry" : "bg-gradient-to-b from-sun to-sun-dark"}`}
+          style={{ boxShadow: "inset 0 -7px 0 oklch(0 0 0 / .18), inset 0 5px 0 oklch(1 0 0 / .55), 0 4px 0 var(--ink)" }}
+        />
+        <span className="relative flex h-full flex-col items-center justify-center">
+          <span className="font-display text-[30px] leading-none text-cream text-outline">{auto ? "STOP" : "SPIN"}</span>
+          <span className="mt-1 font-display text-[8px] leading-tight text-ink/60">HOLD FOR<br />AUTOSPIN</span>
+        </span>
+      </button>
+      <button
+        onClick={() => setBet((b) => BETS[(BETS.indexOf(b) + 1) % BETS.length]!)}
+        aria-label="Change bet"
+        className="absolute -right-5 top-0 grid h-11 w-11 rotate-45 place-items-center rounded-[11px] border-[3px] border-ink bg-gradient-to-b from-sun to-sun-dark transition-transform active:scale-90"
+        style={{ boxShadow: "inset 0 -4px 0 oklch(0 0 0 / .18), inset 0 3px 0 oklch(1 0 0 / .5), 0 3px 0 var(--ink)" }}
+      >
+        <span className="-rotate-45 font-display text-base leading-none text-cream text-outline">x{bet}</span>
+      </button>
     </div>
+  );
+
+  return (
+    <Screen bare scroll={false} center={spinBtn}>
+      <div className="flex h-full flex-col items-center justify-center px-3 pb-14 pt-2">
+        <div className={`w-full max-w-[360px] ${shake ? "animate-shake" : ""}`}>
+          <div className="slot-card rounded-[32px] border border-cream/20 bg-cream/10 p-3 shadow-[0_20px_50px_-12px_oklch(0_0_0/.6),inset_0_1px_0_oklch(1_0_0/.25)] backdrop-blur-2xl">
+            {/* status / winner */}
+            <div className="flex h-14 items-center gap-3 overflow-hidden rounded-[20px] bg-ink/40 px-3">
+              {win ? (
+                <div key={win.k} className="animate-pop flex w-full items-center justify-center gap-2">
+                  <span className="font-display text-xs tracking-wider text-cream/70">YOU WON</span>
+                  {([["coins", ART.coin], ["spins", ART.bolt], ["tickets", ART.gem]] as const).filter(([k]) => win[k] > 0).map(([k, img]) => (
+                    <span key={k} className="flex items-center gap-1 rounded-full bg-cream/15 py-0.5 pl-0.5 pr-2.5">
+                      <img src={img} alt="" className="h-7 w-7 object-contain" />
+                      <span className="font-display text-base leading-none text-sun">+{fmt(win[k])}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <img src={hero} alt="" className="h-10 w-10 rounded-full bg-cream/15 object-cover object-top" />
+                  <div className="min-w-0 leading-tight">
+                    <div className="text-[11px] font-medium uppercase tracking-wider text-cream/60">Welcome back</div>
+                    <div className="truncate font-display text-base text-cream">{name}</div>
+                  </div>
+                  <span className="ml-auto rounded-full bg-cream/15 px-2.5 py-1 text-xs font-semibold text-cream">Good luck!</span>
+                </>
+              )}
+            </div>
+
+            {/* 48h event token track */}
+            <div className="mt-3 flex items-center gap-2 px-1">
+              <img src={TOKEN_ART[ev.key]} alt="" className="h-9 w-9 shrink-0 object-contain drop-shadow-[0_3px_0_var(--ink)]" />
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-baseline justify-between">
+                  <span className="truncate font-display text-[11px] leading-none text-cream">{ev.name.toUpperCase()}</span>
+                  <span className="font-display text-[10px] leading-none text-cream/60">{now ? clock(ev.endsIn) : ""}</span>
+                </div>
+                <div className="bar mt-0.5">
+                  <div className="bar-fill" style={{ width: `${Math.max(4, (evTok / evNeed(evTier)) * 100)}%`, background: "linear-gradient(90deg, var(--berry), var(--sun))" }} />
+                  <span className="bar-label">{evTok}/{evNeed(evTier)}</span>
+                </div>
+              </div>
+              <span className="relative shrink-0">
+                <img src={ART.coin} alt="" className="h-9 w-9 object-contain" />
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap font-display text-[10px] leading-none text-cream text-outline">{fmt(evReward(evTier))}</span>
+              </span>
+            </div>
+
+            {/* reels */}
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {reels.map((sym, i) => (
+                <div key={i} className="slot-reel relative overflow-hidden rounded-[22px] bg-cream shadow-[inset_0_14px_14px_-10px_oklch(0_0_0/.3),inset_0_-14px_14px_-10px_oklch(0_0_0/.3)]">
+                  {spinning[i] ? (
+                    <div className="animate-reel flex flex-col items-center blur-[1px]">
+                      {[...SYMBOLS, ...SYMBOLS, ...SYMBOLS].map((x, k) => <SymImg key={k} sym={x} className="slot-sym-spin" />)}
+                    </div>
+                  ) : (
+                    <div key={sym + i + s.spins} className="animate-thud flex h-full flex-col items-center justify-between">
+                      <SymImg sym={at(sym, 1)} className="slot-sym-peek opacity-40" />
+                      <SymImg sym={sym} className="slot-sym-main drop-shadow-[0_6px_8px_oklch(0_0_0/.25)]" />
+                      <SymImg sym={at(sym, 2)} className="slot-sym-peek slot-sym-peek-b opacity-40" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* spin pass */}
+            <Link to="/pass" onClick={() => setLevelUp(false)} aria-label="Open spin pass gifts" className={`relative mx-auto mt-3 flex w-[88%] items-center transition-transform active:scale-95 ${levelUp ? "animate-bob" : ""}`}>
+              {levelUp && (
+                <span className="absolute -top-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border-2 border-ink bg-berry px-2 py-0.5 shadow-[0_2px_0_var(--ink)]">
+                  <Gift className="h-3 w-3 text-cream" strokeWidth={3} />
+                  <span className="font-display text-[10px] leading-none text-cream">TAP TO CLAIM</span>
+                </span>
+              )}
+              <span className={`relative z-10 -mr-2 flex h-6 -rotate-6 items-center gap-1 rounded-md border-2 border-ink px-1.5 shadow-[0_2px_0_var(--ink)] ${s.premium ? "bg-gradient-to-b from-sun to-sun-dark" : "bg-gradient-to-b from-sky to-grape"}`}>
+                {s.premium ? <Crown className="h-3 w-3 text-ink" strokeWidth={3} /> : <Ticket className="h-3 w-3 text-cream" strokeWidth={3} />}
+                <span className={`font-display text-[10px] leading-none tracking-wider ${s.premium ? "text-ink" : "text-cream"}`}>{s.premium ? "PREMIUM" : "FREE"}</span>
+              </span>
+              <div className="bar relative flex-1">
+                <div className="bar-fill" style={{ width: `${Math.max(4, Math.min(100, (s.passXp / passNeed(s.passLevel)) * 100))}%`, background: "linear-gradient(90deg, var(--lime), var(--sky))" }} />
+                <span className="bar-label">{fmt(s.passXp)}/{fmt(passNeed(s.passLevel))}</span>
+              </div>
+              <span className={`relative z-10 -ml-2 grid h-8 w-8 rotate-45 place-items-center rounded-[9px] border-2 border-ink bg-gradient-to-br from-sun to-sun-dark ${levelUp ? "ring-4 ring-sun/50" : ""} shadow-[0_2px_0_var(--ink),inset_0_2px_0_oklch(1_0_0/.5)]`}>
+                <span className="-rotate-45 font-display text-sm leading-none text-cream text-outline">{s.passLevel}</span>
+              </span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </Screen>
   );
 }
