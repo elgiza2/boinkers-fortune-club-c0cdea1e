@@ -224,6 +224,10 @@ function Home() {
             </Link>
           </div>
         </div>
+        <div className="mt-3 w-full max-w-[360px] space-y-2">
+          <EventsRow now={now} />
+          <OffersRow now={now} />
+        </div>
       </div>
     </Screen>
   );
