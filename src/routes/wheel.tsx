@@ -1,22 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Screen } from "@/components/game/Shell";
 import { useGame, beep, haptic } from "@/lib/game";
 import prizeBolt from "@/assets/wheel-prize-bolt.png";
-import prizeCoin from "@/assets/wheel-prize-coin.png";
-import prizeGem from "@/assets/wheel-prize-gem.png";
-import prizeChest from "@/assets/wheel-prize-chest.png";
+import { ART } from "@/lib/art";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Star, Ticket } from "lucide-react";
+import { ArrowLeft, Star } from "lucide-react";
 import mascot from "@/assets/merge-mascot-3.png";
-import { WHEEL_PRIZES, wheelLandingRotation } from "@/lib/wheel";
+import { WHEEL_PRIZES, nextWheelBet, wheelLandingRotation } from "@/lib/wheel";
 
 export const Route = createFileRoute("/wheel")({
   head: () => ({
     meta: [
       { title: "Wheel of Fortune — Solo Slots" },
-      { name: "description", content: "Use roulette tickets to spin the wheel for coins, spins and Solo." },
+      { name: "description", content: "Use wheel spins to win spins, more wheel spins and TON." },
       { property: "og:title", content: "Wheel of Fortune — Solo Slots" },
       { property: "og:description", content: "Spin the wheel for big prizes." },
       { property: "og:type", content: "website" },
@@ -27,20 +24,21 @@ export const Route = createFileRoute("/wheel")({
 });
 
 const PRIZES = WHEEL_PRIZES;
-const prizeArt = { bolt: prizeBolt, coin: prizeCoin, gem: prizeGem, chest: prizeChest };
+const prizeArt = { bolt: prizeBolt, wheel: ART.wheelSpin, ton: ART.ton };
 function WheelPage() {
   const { s, spend, grant } = useGame();
   const [rot, setRot] = useState(0);
   const [busy, setBusy] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
+  const [bet, setBet] = useState(1);
   const seg = 360 / PRIZES.length;
   const go = () => {
     if (busy) return;
-    if (!spend({ tickets: 1 })) { toast.error("Need a roulette ticket"); return; }
+    if (!spend({ tickets: bet })) { setWinner("Not enough wheel spins"); return; }
     setBusy(true); setWinner(null); haptic();
     const idx = Math.floor(Math.random() * PRIZES.length);
     setRot(wheelLandingRotation(rot, idx));
-    setTimeout(() => { const p = PRIZES[idx]; if (p) { grant(p.reward); beep(s.sound, 1000, 0.3); setWinner(p.label); toast.success(`You won ${p.label}!`); } setBusy(false); }, 4200);
+    setTimeout(() => { const p = PRIZES[idx]; if (p) { const r = p.reward as { spins?: number; tickets?: number; ton?: number }; grant({ spins: (r.spins ?? 0) * bet, tickets: (r.tickets ?? 0) * bet, ton: +((r.ton ?? 0) * bet).toFixed(2) }); beep(s.sound, 1000, 0.3); setWinner(`+${p.kind === "ton" ? +(Number(p.label) * bet).toFixed(2) + " TON" : p.label + (bet > 1 ? ` ×${bet}` : "")}`); } setBusy(false); }, 4200);
   };
   return (
     <Screen bare scroll={false} navigation={false}>
@@ -58,7 +56,7 @@ function WheelPage() {
             {PRIZES.map((p, i) => (
               <div key={i} className="fortune-prize" style={{ transform: `translateX(-50%) rotate(${i * seg}deg)` }}>
                 <div className="fortune-prize-content">
-                  {p.kind === "ticket" ? <Ticket className="fortune-ticket-prize" /> : <img src={prizeArt[p.kind]} alt="" />}
+                  <img src={prizeArt[p.kind]} alt="" />
                   <span>{p.label}</span>
                 </div>
               </div>
@@ -68,9 +66,10 @@ function WheelPage() {
           </div>
         </div>
         <div className="fortune-controls">
-          <span className="fortune-result" role="status">{winner ? `+${winner}` : ""}</span>
+          <span className="fortune-result" role="status">{winner ?? ""}</span>
+          <button onClick={() => !busy && setBet((b) => nextWheelBet(b, s.tickets))} aria-label="Change wheel multiplier" className="absolute right-[6%] top-6 grid h-12 w-12 rotate-45 place-items-center rounded-[12px] border-[3px] border-ink bg-gradient-to-b from-sun to-sun-dark shadow-[0_3px_0_var(--ink)] active:scale-90"><span className="-rotate-45 font-display text-base text-cream text-outline">x{bet}</span></button>
           <Button onClick={go} disabled={busy} className="fortune-spin" aria-label="Spin prize wheel">{busy ? "SPINNING" : "SPIN"}</Button>
-          <span className="fortune-tickets"><Ticket size={16} />{s.tickets} {s.tickets === 1 ? "ticket" : "tickets"}</span>
+          <span className="fortune-tickets"><img src={ART.wheelSpin} alt="" className="h-5 w-5" />{s.tickets} wheel spins</span>
         </div>
       </div>
     </Screen>

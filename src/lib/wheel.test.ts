@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WHEEL_PRIZES, wheelLandingRotation } from "./wheel";
+import { WHEEL_PRIZES, nextWheelBet, wheelLandingRotation } from "./wheel";
 
 describe("Wheel rewards", () => {
   it("offers more prizes than the previous eight", () => {
@@ -13,5 +13,13 @@ describe("Wheel rewards", () => {
         expect(next - rotation).toBeGreaterThanOrEqual(2160);
       });
     }
+  });
+  it("never gives coins", () => {
+    expect(WHEEL_PRIZES.some((p) => "coins" in p.reward)).toBe(false);
+  });
+  it("multiplier only grows when the player has enough wheel spins", () => {
+    expect(nextWheelBet(1, 1)).toBe(1);
+    expect(nextWheelBet(1, 3)).toBe(2);
+    expect(nextWheelBet(2, 3)).toBe(1);
   });
 });
