@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { addTokens, eventRun, LIVE_EVENTS, progressFor, tierNeed, tierReward, type EventProgress, type EventReward } from "./events";
 import { bankProduction, buyCharacter, mergeRate, moveCharacter, starterBoard, type Board } from "./merge";
 
 export const MAX_SPINS = 50;
@@ -32,6 +33,7 @@ export interface GameState {
   mergeBoard: Board;
   mergeBest: number;
   soloBank: number;
+  live: Record<string, EventProgress>;
 }
 
 const initial = (): GameState => ({
@@ -41,7 +43,7 @@ const initial = (): GameState => ({
   tasksDone: [], claimedMilestones: [], sound: true, lang: "en",
   passXp: 0, passLevel: 1, premium: false,
   eventId: -1, evTokens: 0, evTier: 0,
-  mergeBoard: starterBoard(), mergeBest: 1, soloBank: 0,
+  mergeBoard: starterBoard(), mergeBest: 1, soloBank: 0, live: {},
 });
 
 /** Solo per hour grows with character upgrades and level. */
@@ -138,6 +140,8 @@ interface Ctx {
   gainEvent: (tokens: number) => number;
   buyMerge: () => void;
   moveMerge: (from: number, to: number) => void;
+  gainLive: (hits: Record<string, number>) => void;
+  claimLive: (key: string) => EventReward | null;
 }
 const GameCtx = createContext<Ctx | null>(null);
 const KEY = "solo-slots-v1";
@@ -195,6 +199,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setS((p) => ({ ...p, eventId: r.eventId, evTokens: r.evTokens, evTier: r.evTier, coins: p.coins + r.coins }));
     return r.coins;
   }, [s]);
+  const gainLive = useCallback((hits: Record<string, number>) => setS((p) => {
+    const at = Date.now(), live = { ...p.live };
+    for (const [k, n] of Object.entries(hits)) {
+      const def = LIVE_EVENTS.find((e) => e.key === k); if (!def || n <= 0) continue;
+      live[k] = addTokens(live[k], eventRun(def, at).run, n);
+    }
+    return { ...p, live };
+  }), []);
+  const claimLive = useCallback((key: string) => {
+    const def = LIVE_EVENTS.find((e) => e.key === key); if (!def) return null;
+    const cur = progressFor(s.live[key], eventRun(def, Date.now()).run);
+    if (s.tokens < 0 || cur.tokens < tierNeed(cur.claimed)) return null;
+    const r = tierReward(cur.claimed);
+    setS((p) => ({ ...p, coins: p.coins + (r.coins ?? 0), spins: p.spins + (r.spins ?? 0), tickets: p.tickets + (r.tickets ?? 0), live: { ...p.live, [key]: { ...cur, claimed: cur.claimed + 1 } } }));
+    return r;
+  }, [s]);
   const claimSolo = useCallback(() => {
     const amt = pendingSolo;
     setS((p) => {
@@ -247,7 +267,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const toggleSound = useCallback(() => setS((p) => ({ ...p, sound: !p.sound })), []);
   const setLang = useCallback((lang: "en" | "ar") => setS((p) => ({ ...p, lang })), []);
 
-  return <GameCtx.Provider value={{ s, ready, pendingSolo, nextSpinIn, grant, spend, claimSolo, upgrade, completeTask, claimMilestone, toggleSound, setLang, gainPass, gainEvent, buyMerge, moveMerge }}>{children}</GameCtx.Provider>;
+  return <GameCtx.Provider value={{ s, ready, pendingSolo, nextSpinIn, grant, spend, claimSolo, upgrade, completeTask, claimMilestone, toggleSound, setLang, gainPass, gainEvent, buyMerge, moveMerge, gainLive, claimLive }}>{children}</GameCtx.Provider>;
 }
 
 export function useGame() {
