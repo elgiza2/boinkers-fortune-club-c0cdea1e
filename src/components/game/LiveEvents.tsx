@@ -56,7 +56,7 @@ export function EventsRow({ now }: { now: number }) {
   const offers = currentOffers(now || 0);
   return (
     <>
-      <div className="flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+      <div className="flex gap-1.5 overflow-x-auto px-1 pb-1 pt-2.5 [scrollbar-width:none]">
         {LIVE_EVENTS.map((e) => {
           const { run, endsIn } = eventRun(e, now || 0);
           return (
@@ -67,7 +67,7 @@ export function EventsRow({ now }: { now: number }) {
         })}
         {offers.map((o) => (
           <button key={o.key} onClick={() => setOpen(o)} aria-label={`Open ${o.name} offer`} className="transition-transform active:scale-90">
-            <Chip img={OFFER_ART[o.key]!} timer={now ? clock(o.endsIn) : "--:--:--"} label={o.name.toUpperCase()} badge={o.ton} badgeIcon={ART.ton} />
+            <OfferChip img={OFFER_ART[o.key]!} timer={now ? clock(o.endsIn) : "--:--:--"} price={o.ton} hot={o.ton >= 1.5} />
           </button>
         ))}
       </div>
