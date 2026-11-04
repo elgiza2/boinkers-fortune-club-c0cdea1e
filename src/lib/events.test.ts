@@ -46,6 +46,10 @@ describe("slots", () => {
   it("never awards TON from the slots", () => {
     for (const a of PAYTABLE) expect(payout([a.sym, a.sym, a.sym], 3).ton).toBe(0);
   });
+  it("pays consolation coins on a spin with no prize", () => {
+    expect(payout(["coin", "bolt", "wheel"], 1).coins).toBe(100);
+    expect(payout(["token", "live", "token"], 5).coins).toBe(500);
+  });
 });
 
 describe("offers", () => {
