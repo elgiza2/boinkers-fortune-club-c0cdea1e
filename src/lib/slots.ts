@@ -29,5 +29,7 @@ export function payout(cells: string[], bet: number): SlotWin {
     out.coins += (r.coins ?? 0) * bet; out.spins += (r.spins ?? 0) * bet;
     out.tickets += (r.tickets ?? 0) * bet; out.ton = +(out.ton + (r.ton ?? 0) * bet).toFixed(2);
   }
+  // Consolation: any spin with no prize still pays a little coins.
+  if (!out.coins && !out.spins && !out.tickets && !out.ton) out.coins = 100 * bet;
   return out;
 }
