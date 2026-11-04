@@ -15,6 +15,7 @@ import { Route as NftRouteImport } from './routes/nft'
 import { Route as PassRouteImport } from './routes/pass'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as WheelRouteImport } from './routes/wheel'
+import { Route as EventKeyRouteImport } from './routes/event.$key'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const WheelRoute = WheelRouteImport.update({
   path: '/wheel',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EventKeyRoute = EventKeyRouteImport.update({
+  id: '/event/$key',
+  path: '/event/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/pass': typeof PassRoute
   '/upgrade': typeof UpgradeRoute
   '/wheel': typeof WheelRoute
+  '/event/$key': typeof EventKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/pass': typeof PassRoute
   '/upgrade': typeof UpgradeRoute
   '/wheel': typeof WheelRoute
+  '/event/$key': typeof EventKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,13 +79,23 @@ export interface FileRoutesById {
   '/pass': typeof PassRoute
   '/upgrade': typeof UpgradeRoute
   '/wheel': typeof WheelRoute
+  '/event/$key': typeof EventKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/earn' | '/nft' | '/pass' | '/upgrade' | '/wheel'
+  fullPaths:
+    '/' | '/earn' | '/nft' | '/pass' | '/upgrade' | '/wheel' | '/event/$key'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/earn' | '/nft' | '/pass' | '/upgrade' | '/wheel'
-  id: '__root__' | '/' | '/earn' | '/nft' | '/pass' | '/upgrade' | '/wheel'
+  to: '/' | '/earn' | '/nft' | '/pass' | '/upgrade' | '/wheel' | '/event/$key'
+  id:
+    | '__root__'
+    | '/'
+    | '/earn'
+    | '/nft'
+    | '/pass'
+    | '/upgrade'
+    | '/wheel'
+    | '/event/$key'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -87,6 +105,7 @@ export interface RootRouteChildren {
   PassRoute: typeof PassRoute
   UpgradeRoute: typeof UpgradeRoute
   WheelRoute: typeof WheelRoute
+  EventKeyRoute: typeof EventKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -133,6 +152,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WheelRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/event/$key': {
+      id: '/event/$key'
+      path: '/event/$key'
+      fullPath: '/event/$key'
+      preLoaderRoute: typeof EventKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -143,6 +169,7 @@ const rootRouteChildren: RootRouteChildren = {
   PassRoute: PassRoute,
   UpgradeRoute: UpgradeRoute,
   WheelRoute: WheelRoute,
+  EventKeyRoute: EventKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
